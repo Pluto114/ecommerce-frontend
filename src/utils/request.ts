@@ -5,11 +5,10 @@ import router from '@/router'; // 稍后我们会配置路由，这里先引入
 import type { Result } from '@/types';
 
 // 创建 axios 实例
-const service: AxiosInstance = axios.create({
-  // 根据文档 [cite: 4]，后端地址是 localhost:8080
-  // 注意：如果你后续配置了 Vite 代理，这里可以改成 '/api'
-  baseURL: 'http://localhost:8080', 
-  timeout: 5000, // 请求超时时间
+const service = axios.create({
+  // 如果是生产环境(打包后)，用 Render 的地址；如果是开发环境，用本地
+  baseURL: import.meta.env.PROD ? 'https://ecommerce-backend-ys07.onrender.com' : 'http://localhost:8080',
+  timeout: 5000
 });
 
 // --- 请求拦截器 (Request Interceptor) ---
