@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mermaid 流程图</title>
+
+  <!-- Mermaid (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <style>
+    body { margin: 0; padding: 24px; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .card { max-width: 1100px; margin: 0 auto; padding: 16px 16px 4px; border: 1px solid #e5e7eb; border-radius: 12px; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .mermaid { overflow: auto; }
+    .hint { margin-top: 12px; font-size: 12px; color: #6b7280; line-height: 1.6; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>链接工具流程图（-h/-s/-r/-d）</h1>
+
+    <div class="mermaid">
+flowchart TD
+Start((开始)) --> CheckArg{参数数量<br>3 或 4 个?}
+
+CheckArg -- 否 --> ErrFormat[输出用法格式]
+ErrFormat --> ExitFail((退出))
+
+CheckArg -- 是 --> Branch{判断 argv[1] 选项}
+
+%% 统一错误处理节点
+Error[输出错误信息] --> ExitFail
+
+Branch -- "-h" --> HardLink[link 创建硬链接]
+HardLink --> CheckHL{成功?}
+CheckHL -- 否 --> Error
+CheckHL -- 是 --> End((结束))
+
+Branch -- "-s" --> SymLink[symlink 创建软链接]
+SymLink --> CheckSL{成功?}
+CheckSL -- 否 --> Error
+CheckSL -- 是 --> End
+
+Branch -- "-r" --> ReadLink[readlink 读取链接内容]
+ReadLink --> CheckRL{成功?}
+CheckRL -- 否 --> Error
+CheckRL -- 是 --> PrintLink[打印链接指向路径]
+PrintLink --> End
+
+Branch -- "-d" --> UnLink[unlink 删除链接]
+UnLink --> CheckUL{成功?}
+CheckUL -- 否 --> Error
+CheckUL -- 是 --> End
+
+Branch -- "其他" --> ErrFormat
+    </div>
+
+    <div class="hint">
+      若你在本地直接双击打开 HTML 没显示：
+      1) 确认网络可访问 CDN；或 2) 把 <code>mermaid.min.js</code> 下载到本地并改成相对路径引用。
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "strict",
+      theme: "default",
+      flowchart: { htmlLabels: true, curve: "linear" }
+    });
+  </script>
+</body>
+</html>

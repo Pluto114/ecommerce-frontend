@@ -13,7 +13,15 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/login/Login.vue'), 
     meta: { title: '登录' }
   },
-  
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/register/Register.vue'), 
+    meta: { title: '注册' }
+  },
+
+
+
   // ================= 商城前台 (Role 3: User) =================
   {
     path: '/home',
@@ -70,7 +78,29 @@ const routes: RouteRecordRaw[] = [
         name: 'ProductManage',
         component: () => import('@/views/admin/ProductManage.vue'),
         meta: { title: '商品管理', role: UserRole.MANAGER } 
+      },
+      {
+          path: '/admin/order',
+          component: () => import('@/views/admin/MerchantOrderManage.vue'),
+          meta: { requiresAuth: true }
+        },
+
+     {
+        path: 'order', // ✅ 访问路径：/admin/order
+        name: 'MerchantOrderManage',
+        component: () => import('@/views/admin/MerchantOrderManage.vue'),
+        meta: { title: '订单管理', role: UserRole.MANAGER } // ✅ 仅商家可见
+      },
+
+
+      {
+        path: 'banner',
+        name: 'BannerManage',
+        component: () => import('@/views/admin/BannerManage.vue'),
+        meta: { title: '轮播图管理', role: UserRole.ADMIN } 
       }
+      
+      
     ]
   },
   

@@ -15,7 +15,7 @@
               <span><el-icon><Location /></el-icon> 收货人信息</span>
             </div>
           </template>
-          
+
           <el-form :model="addressForm" label-width="90px" :rules="rules" ref="formRef">
             <el-row :gutter="20">
               <el-col :span="12">
@@ -30,10 +30,10 @@
               </el-col>
             </el-row>
             <el-form-item label="收货地址" prop="address">
-              <el-input 
-                v-model="addressForm.address" 
-                type="textarea" 
-                rows="2" 
+              <el-input
+                v-model="addressForm.address"
+                type="textarea"
+                rows="2"
                 placeholder="省/市/区/街道门牌号"
               />
             </el-form-item>
@@ -47,15 +47,15 @@
               <span class="sub-text">共 {{ checkoutItems.length }} 件</span>
             </div>
           </template>
-          
+
           <div class="item-list">
             <div v-for="item in checkoutItems" :key="item.id" class="order-item">
               <el-image :src="item.productImage" class="thumb" />
               <div class="info">
                 <div class="name">{{ item.productName }}</div>
-                <div class="price">¥ {{ item.price }} x {{ item.quantity }}</div>
+                <div class="price">¥ {{ toMoney(item.price) }} x {{ item.quantity }}</div>
               </div>
-              <div class="total">¥ {{ (item.price * item.quantity).toFixed(2) }}</div>
+              <div class="total">¥ {{ toMoney(item.price * item.quantity) }}</div>
             </div>
           </div>
         </el-card>
@@ -65,7 +65,7 @@
         <el-card shadow="hover" class="summary-card">
           <div class="summary-row">
             <span>商品总额</span>
-            <span>¥ {{ totalPrice.toFixed(2) }}</span>
+            <span>¥ {{ toMoney(totalPrice) }}</span>
           </div>
           <div class="summary-row">
             <span>运费</span>
@@ -74,7 +74,7 @@
           <el-divider />
           <div class="final-price">
             <span class="label">应付金额:</span>
-            <span class="amount">¥ {{ totalPrice.toFixed(2) }}</span>
+            <span class="amount">¥ {{ toMoney(totalPrice) }}</span>
           </div>
 
           <div class="address-preview" v-if="addressForm.address">
@@ -82,10 +82,10 @@
             <small>{{ addressForm.name }} {{ addressForm.phone }}</small>
           </div>
 
-          <el-button 
-            type="primary" 
-            size="large" 
-            class="pay-btn" 
+          <el-button
+            type="primary"
+            size="large"
+            class="pay-btn"
             @click="handleSubmitOrder"
             :loading="submitting"
           >
@@ -99,18 +99,25 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, Location, Goods } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import type { CartVO } from '@/types'
+import { payOrder } from '@/api/order'
+import request from '@/utils/request'
 
 const router = useRouter()
+const route = useRoute()
+
 const checkoutItems = ref<CartVO[]>([])
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
 
-// 表单数据
+// cartIds：后端下单必传（购物车记录ID）
+const cartIds = ref<number[]>([])
+
+// 表单数据（你可以把默认值改空；我先保留你原来的默认便于测试）
 const addressForm = reactive({
   name: 'Jerry',
   phone: '13800138000',
@@ -128,57 +135,101 @@ const totalPrice = computed(() => {
   return checkoutItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
 })
 
-// 初始化：从 sessionStorage 读取数据
+const toMoney = (v: any) => {
+  const n = Number(v || 0)
+  return Number.isFinite(n) ? n.toFixed(2) : '0.00'
+}
+
+// 初始化：从 sessionStorage / query 读取数据
 onMounted(() => {
+  // 1) 展示用商品列表
   const data = sessionStorage.getItem('checkoutItems')
   if (data) {
     checkoutItems.value = JSON.parse(data)
+  }
+
+  // 2) cartIds：优先 query（可刷新），兜底 sessionStorage
+  const q = route.query.cartIds
+  if (typeof q === 'string' && q.trim()) {
+    cartIds.value = q.split(',').map(s => Number(s)).filter(n => Number.isFinite(n))
   } else {
+    const cid = sessionStorage.getItem('checkoutCartIds')
+    if (cid) {
+      try {
+        cartIds.value = JSON.parse(cid)
+      } catch {
+        cartIds.value = []
+      }
+    }
+  }
+
+  // 如果缺关键数据，直接回购物车
+  if (!checkoutItems.value.length || !cartIds.value.length) {
     ElMessage.error('没有结算商品，返回购物车')
     router.replace('/cart')
   }
 })
 
-// 提交订单
+// 提交订单（真实）
 const handleSubmitOrder = async () => {
   if (!formRef.value) return
+
   await formRef.value.validate(async (valid) => {
-    if (valid) {
-      submitting.value = true
-      
-      // --- 模拟调用后端下单接口 ---
-      // const res = await request.post('/order/create', { ... })
-      
-      setTimeout(() => {
-        submitting.value = false
-        // 模拟生成订单号
-        const mockOrderSn = 'ORD' + Date.now()
-        
-        // 弹出模拟支付窗口
-        ElMessageBox.confirm(
-          `订单提交成功！订单号：${mockOrderSn}\n需支付金额：¥${totalPrice.value}`,
-          '收银台',
-          {
-            confirmButtonText: '立即支付 (模拟)',
-            cancelButtonText: '稍后支付',
-            type: 'success',
-            center: true
-          }
-        ).then(() => {
-          // 支付成功逻辑
-          ElMessage.success('支付成功！')
-          // 清空购物车缓存
-          sessionStorage.removeItem('checkoutItems')
-          // 这里可以跳转到“我的订单”页（暂未开发，先回首页）
-          router.push('/home')
-        }).catch(() => {
-          ElMessage.info('已取消支付，请在订单列表中查看')
-          router.push('/home')
-        })
-        
-      }, 1500)
+    if (!valid) return
+
+    if (!cartIds.value.length) {
+      ElMessage.error('结算数据丢失，请返回购物车重新勾选')
+      router.replace('/cart')
+      return
+    }
+
+    submitting.value = true
+    try {
+      // ✅ 调后端：POST /order/create（返回 orderSn）
+      // 你的 request.ts 会解包 Result<T>，所以这里拿到的是字符串 orderSn
+      const orderSn = await request.post<any, string>('/order/create', {
+        cartIds: cartIds.value,
+        receiverName: addressForm.name,
+        receiverPhone: addressForm.phone,
+        address: addressForm.address
+      })
+
+      // 立刻清理结算缓存（避免重复提交）
+      sessionStorage.removeItem('checkoutItems')
+      sessionStorage.removeItem('checkoutCartIds')
+
+      // 收银台：支付 or 稍后支付
+      await showCashier(orderSn)
+    } catch (e) {
+      // request.ts 已 toast，这里不重复
+    } finally {
+      submitting.value = false
     }
   })
+}
+
+const showCashier = async (orderSn: string) => {
+  try {
+    await ElMessageBox.confirm(
+      `订单提交成功！订单号：${orderSn}\n需支付金额：¥${toMoney(totalPrice.value)}`,
+      '收银台',
+      {
+        confirmButtonText: '立即支付 (模拟)',
+        cancelButtonText: '稍后支付',
+        type: 'success',
+        center: true
+      }
+    )
+
+    // ✅ 选择立即支付：调后端 pay
+    await payOrder(orderSn)
+    ElMessage.success('支付成功！')
+    // 跳到订单列表（你 OrderList.vue 页面）并默认切到待发货
+    router.push({ path: '/order/list', query: { tab: '1' } })
+  } catch {
+    ElMessage.info('已取消支付，请在订单列表中完成支付')
+    router.push({ path: '/order/list', query: { tab: '0' } })
+  }
 }
 </script>
 
@@ -198,7 +249,6 @@ const handleSubmitOrder = async () => {
 .card-header { font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
 .sub-text { font-size: 12px; color: #999; font-weight: normal; }
 
-/* 商品列表 */
 .item-list { display: flex; flex-direction: column; gap: 15px; }
 .order-item { display: flex; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
 .order-item:last-child { border-bottom: none; padding-bottom: 0; }
@@ -208,7 +258,6 @@ const handleSubmitOrder = async () => {
 .price { font-size: 12px; color: #999; }
 .total { font-weight: bold; color: #333; }
 
-/* 右侧结算栏 */
 .summary-card { position: sticky; top: 20px; border-radius: 8px; }
 .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #666; }
 .final-price { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; margin-bottom: 20px; }

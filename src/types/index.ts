@@ -84,3 +84,53 @@ export interface OrderVO {
     createTime: string;
     orderItems: OrderItem[];
 }
+// src/types/order.ts
+
+export interface OrderItem {
+  orderId?: number
+  productId: number
+  productName: string
+  productImage: string
+  productPrice: number
+  quantity: number
+}
+
+export interface OrderVO {
+  id: number
+  orderSn: string
+
+  userId?: number
+
+  totalAmount: number
+  payAmount?: number
+  pointsUsed?: number
+
+  status: number
+  statusText?: string
+
+  cancelReason?: string
+  refundReason?: string
+  refundAdminReason?: string
+
+  createTime?: string
+  payTime?: string
+  shippingTime?: string
+  receiveTime?: string
+  commentTime?: string
+  updateTime?: string
+
+  receiverName?: string
+  receiverPhone?: string
+  address?: string
+  receiverInfo?: string
+
+  orderItems?: OrderItem[]
+}
+
+export interface OrderVOPage {
+  records: OrderVO[]
+  total: number
+  size: number
+  current: number
+  pages: number
+}
